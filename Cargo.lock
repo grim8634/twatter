@@ -9,7 +9,7 @@ dependencies = [
  "serde 0.7.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_macros 0.7.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "toml 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
- "twitter-api 0.2.0",
+ "twitter-api 0.2.0 (git+https://github.com/grim8634/twitter-api-rs.git)",
 ]
 
 [[package]]
@@ -308,6 +308,7 @@ dependencies = [
 [[package]]
 name = "twitter-api"
 version = "0.2.0"
+source = "git+https://github.com/grim8634/twitter-api-rs.git#04c332adaa4ea2730a96930680ba3c5ba93f3120"
 dependencies = [
  "oauth-client 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",

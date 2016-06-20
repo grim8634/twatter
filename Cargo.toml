@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Graeme Lawton <graeme.lawton@la.wton.email>"]
 
 [dependencies]
-twitter-api = { path = "../twitter-api-rs" }
+twitter-api = { git = "https://github.com/grim8634/twitter-api-rs.git" }
 log = "0.3"
 env_logger = "0.3"
 oauth-client = "0.1"
