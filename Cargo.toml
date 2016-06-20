@@ -1,0 +1,14 @@
+[package]
+name = "twatter"
+version = "0.1.0"
+authors = ["Graeme Lawton <graeme.lawton@la.wton.email>"]
+
+[dependencies]
+twitter-api = { path = "../twitter-api-rs" }
+log = "0.3"
+env_logger = "0.3"
+oauth-client = "0.1"
+toml = { version = "0.1", default-features = false, features = ["serde"] }
+serde = "0.7"
+serde_macros = "0.7"
+quick-error = "1.1"
