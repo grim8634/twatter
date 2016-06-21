@@ -13,7 +13,7 @@ pub fn run(config: &TwatterConfig) {
     let access = Token::new(conf.access_key.to_string(), conf.access_secret.to_string());
 
     loop {
-        println!("Checking for tweets....");
+        info!("Checking for tweets....");
         let max_id = counter::get("status.id") as u64;
         let mut new_max_id = max_id;
         let mut dm_max_id = 0 as u64; //We need the actual max id to delete last message
@@ -68,10 +68,14 @@ fn process_dm_command(consumer: &Token, access: &Token, dm: &DirectMessage, last
             },
             _ => {
                 println!("UNKNOWN DIRECT MESSAGE COMMAND");
-                match twitter_api::direct_message(consumer, access, "UNKNOWN DIRECT MESSAGE COMMAND", &dm.sender_screen_name) {
-                    Err(e) => println!("Failed to send DM, are they following us? {}", e),
-                    Ok(v) => (v)
-                }
+                twitter_api::direct_message(
+                    consumer,
+                    access,
+                    "UNKNOWN DIRECT MESSAGE COMMAND",
+                    &dm.sender_screen_name
+                ).unwrap_or_else(|e| {
+                    println!("Failed to send DM, are they following us? {}", e);
+                });
             }
         };
         counter::set(dm.id, "dm.id").unwrap();
@@ -80,10 +84,9 @@ fn process_dm_command(consumer: &Token, access: &Token, dm: &DirectMessage, last
 
 fn delete_tweet(consumer: &Token, access: &Token, last_tweet_id: &u64) {
     println!("\tDELETING {}", last_tweet_id.to_string());
-    match twitter_api::destroy_status(consumer, access, last_tweet_id) {
-        Err(e) => println!("Failed to Delete Tweet {}", e),
-        Ok(v) => (v)
-    };
+    twitter_api::destroy_status(consumer, access, last_tweet_id).unwrap_or_else(|e| {
+        println!("Failed to Delete Tweet {}", e);
+    });
 }
 
 fn process_tweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
@@ -98,16 +101,19 @@ fn retweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig
 
     if new_message.len() > 140 {
         println!("\tTWEET TOO LONG");
-        match twitter_api::direct_message(consumer, access, "Your message was too long and wasn't retweeted", &tweet.user.screen_name) {
-            Err(e) => println!("Failed to send DM, are they following us? {}", e),
-            Ok(v) => v
-        }
+        twitter_api::direct_message(
+            consumer, 
+            access, 
+            "Your message was too long and wasn't retweeted",
+            &tweet.user.screen_name
+        ).unwrap_or_else(|e| {
+            println!("Failed to send DM, are they following us? {}", e);
+        });
     } else {
         println!("{}: {}", tweet.user.screen_name, &new_message);
-        match twitter_api::update_status(consumer, access, &new_message) {
-            Err(e) => println!("Failed to tweet message: {}", e),
-            Ok(v) => v
-        }
+        twitter_api::update_status(consumer, access, &new_message).unwrap_or_else(|e| {
+            println!("Failed to tweet message: {}", e);
+        });
     }
 }
 
@@ -123,7 +129,6 @@ fn get_tweets(consumer:&Token, access:&Token)->Option<Vec<Tweet>> {
         },
         Ok(tweets) => Some(tweets),
     }
-
 }
 
 fn get_direct_messages(consumer:&Token, access:&Token)->Option<Vec<DirectMessage>> {
@@ -134,7 +139,6 @@ fn get_direct_messages(consumer:&Token, access:&Token)->Option<Vec<DirectMessage
         },
         Ok(messages) => Some(messages),
     }
-
 }
 
 
