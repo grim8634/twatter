@@ -29,10 +29,10 @@ pub fn run(config: &TwatterConfig) {
                         if tweet.id > new_max_id {
                             new_max_id = tweet.id;
                         }
-                       process_tweet(&tweet, &consumer, &access, &config);
+                        process_tweet(&tweet, &consumer, &access, config);
                     }
                     //must be a better way to do this?
-                    if (tweet.id > dm_max_id) && (tweet.user.screen_name == config.twitter.screen_name.to_string()) {
+                    if (tweet.id > dm_max_id) && (tweet.user.screen_name == config.twitter.screen_name) {
                         dm_max_id = tweet.id;
                     }
                 }
@@ -40,19 +40,19 @@ pub fn run(config: &TwatterConfig) {
         }
 
         counter::set(new_max_id, "status.id").unwrap();
-        process_dms(&consumer, &access, &config, &dm_max_id);
+        process_dms(&consumer, &access, config, &dm_max_id);
         thread::sleep(Duration::from_secs(60)); //Run every 60 seconds...
     }
 }
 
 fn process_dms(consumer: &Token, access: &Token, config: &TwatterConfig, last_tweet_id: &u64) {
-    let dms = get_direct_messages(&consumer, &access);
+    let dms = get_direct_messages(consumer, access);
     if ! dms.is_none() {
         let dms = dms.unwrap();
         if ! dms.is_empty() {
             for dm in dms {
                 if ! config.aliases[&dm.sender_screen_name].as_str().unwrap().is_empty() {
-                    process_dm_command(&consumer, &access, &dm, &last_tweet_id);
+                    process_dm_command(consumer, access, &dm, last_tweet_id);
                 }
             }
         }
@@ -64,11 +64,11 @@ fn process_dm_command(consumer: &Token, access: &Token, dm: &DirectMessage, last
     if dm.id > max_id {
         match dm.text.to_uppercase().as_str() {
             "DELETE" => {
-                delete_tweet(&consumer, &access, &last_tweet_id);
+                delete_tweet(consumer, access, last_tweet_id);
             },
             _ => {
                 println!("UNKNOWN DIRECT MESSAGE COMMAND");
-                match twitter_api::direct_message(&consumer, &access, "UNKNOWN DIRECT MESSAGE COMMAND", &dm.sender_screen_name) {
+                match twitter_api::direct_message(consumer, access, "UNKNOWN DIRECT MESSAGE COMMAND", &dm.sender_screen_name) {
                     Err(e) => println!("Failed to send DM, are they following us? {}", e),
                     Ok(v) => (v)
                 }
@@ -80,31 +80,31 @@ fn process_dm_command(consumer: &Token, access: &Token, dm: &DirectMessage, last
 
 fn delete_tweet(consumer: &Token, access: &Token, last_tweet_id: &u64) {
     println!("\tDELETING {}", last_tweet_id.to_string());
-    match twitter_api::destroy_status(&consumer, &access, &last_tweet_id) {
+    match twitter_api::destroy_status(consumer, access, last_tweet_id) {
         Err(e) => println!("Failed to Delete Tweet {}", e),
         Ok(v) => (v)
     };
 }
 
 fn process_tweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
-    if tweet.user.screen_name != config.twitter.screen_name.to_string() {
-        retweet(&tweet, &consumer, &access, &config);
+    if tweet.user.screen_name != config.twitter.screen_name {
+        retweet(tweet, consumer, access, config);
     }
 }
 
 fn retweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
     println!("{:?}", tweet);
-    let new_message = add_user_initials(&tweet, &config);
+    let new_message = add_user_initials(tweet, config);
 
     if new_message.len() > 140 {
         println!("\tTWEET TOO LONG");
-        match twitter_api::direct_message(&consumer, &access, "Your message was too long and wasn't retweeted", &tweet.user.screen_name) {
+        match twitter_api::direct_message(consumer, access, "Your message was too long and wasn't retweeted", &tweet.user.screen_name) {
             Err(e) => println!("Failed to send DM, are they following us? {}", e),
             Ok(v) => v
         }
     } else {
         println!("{}: {}", tweet.user.screen_name, &new_message);
-        match twitter_api::update_status(&consumer, &access, &new_message) {
+        match twitter_api::update_status(consumer, access, &new_message) {
             Err(e) => println!("Failed to tweet message: {}", e),
             Ok(v) => v
         }
@@ -116,7 +116,7 @@ fn add_user_initials( tweet: &Tweet, config: &TwatterConfig ) -> String {
 }
 
 fn get_tweets(consumer:&Token, access:&Token)->Option<Vec<Tweet>> {
-    match twitter_api::get_last_tweets(&consumer, &access) {
+    match twitter_api::get_last_tweets(consumer, access) {
         Err(e) => {
             println!("{:?}", e);
             None
@@ -127,7 +127,7 @@ fn get_tweets(consumer:&Token, access:&Token)->Option<Vec<Tweet>> {
 }
 
 fn get_direct_messages(consumer:&Token, access:&Token)->Option<Vec<DirectMessage>> {
-    match twitter_api::get_direct_messages(&consumer, &access) {
+    match twitter_api::get_direct_messages(consumer, access) {
         Err(e) => {
             println!("{:?}", e);
             None
