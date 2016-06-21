@@ -1,4 +1,3 @@
 target
 twatter.toml
-counter.txt
-
+*.id

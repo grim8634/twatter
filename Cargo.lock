@@ -308,7 +308,7 @@ dependencies = [
 [[package]]
 name = "twitter-api"
 version = "0.2.0"
-source = "git+https://github.com/grim8634/twitter-api-rs.git#04c332adaa4ea2730a96930680ba3c5ba93f3120"
+source = "git+https://github.com/grim8634/twitter-api-rs.git#e247e39329d714770608da6e4e2de52676fc2888"
 dependencies = [
  "oauth-client 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",

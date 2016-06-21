@@ -1,5 +1,5 @@
 use oauth_client::Token;
-use twitter_api::Tweet;
+use twitter_api::{Tweet, DirectMessage};
 use twitter_api;
 use counter;
 use std::time::Duration;
@@ -14,8 +14,9 @@ pub fn run(config: &TwatterConfig) {
 
     loop {
         println!("Checking for tweets....");
-        let max_id = counter::get() as u64;
+        let max_id = counter::get("status.id") as u64;
         let mut new_max_id = max_id;
+        let mut dm_max_id = 0 as u64; //We need the actual max id to delete last message
 
         let tweets = get_tweets(&consumer, &access);
         if ! tweets.is_none() {
@@ -28,24 +29,70 @@ pub fn run(config: &TwatterConfig) {
                         if tweet.id > new_max_id {
                             new_max_id = tweet.id;
                         }
-                        process_tweet(tweet, &consumer, &access, &config);
+                       process_tweet(&tweet, &consumer, &access, &config);
+                    }
+                    //must be a better way to do this?
+                    if (tweet.id > dm_max_id) && (tweet.user.screen_name == config.twitter.screen_name.to_string()) {
+                        dm_max_id = tweet.id;
                     }
                 }
             }
         }
 
-        counter::set(new_max_id).unwrap();
+        counter::set(new_max_id, "status.id").unwrap();
+        process_dms(&consumer, &access, &config, &dm_max_id);
         thread::sleep(Duration::from_secs(60)); //Run every 60 seconds...
     }
 }
 
-fn process_tweet(tweet:Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
-    if tweet.user.screen_name != "1hgscouts" {
-        retweet(tweet, &consumer, &access, &config);
+fn process_dms(consumer: &Token, access: &Token, config: &TwatterConfig, last_tweet_id: &u64) {
+    let dms = get_direct_messages(&consumer, &access);
+    if ! dms.is_none() {
+        let dms = dms.unwrap();
+        if ! dms.is_empty() {
+            for dm in dms {
+                if ! config.aliases[&dm.sender_screen_name].as_str().unwrap().is_empty() {
+                    process_dm_command(&consumer, &access, &dm, &last_tweet_id);
+                }
+            }
+        }
     }
 }
 
-fn retweet(tweet:Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
+fn process_dm_command(consumer: &Token, access: &Token, dm: &DirectMessage, last_tweet_id: &u64) {
+    let max_id = counter::get("dm.id") as u64;
+    if dm.id > max_id {
+        match dm.text.to_uppercase().as_str() {
+            "DELETE" => {
+                delete_tweet(&consumer, &access, &last_tweet_id);
+            },
+            _ => {
+                println!("UNKNOWN DIRECT MESSAGE COMMAND");
+                match twitter_api::direct_message(&consumer, &access, "UNKNOWN DIRECT MESSAGE COMMAND", &dm.sender_screen_name) {
+                    Err(e) => println!("Failed to send DM, are they following us? {}", e),
+                    Ok(v) => (v)
+                }
+            }
+        };
+        counter::set(dm.id, "dm.id").unwrap();
+    }
+}
+
+fn delete_tweet(consumer: &Token, access: &Token, last_tweet_id: &u64) {
+    println!("\tDELETING {}", last_tweet_id.to_string());
+    match twitter_api::destroy_status(&consumer, &access, &last_tweet_id) {
+        Err(e) => println!("Failed to Delete Tweet {}", e),
+        Ok(v) => (v)
+    };
+}
+
+fn process_tweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
+    if tweet.user.screen_name != config.twitter.screen_name.to_string() {
+        retweet(&tweet, &consumer, &access, &config);
+    }
+}
+
+fn retweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
     println!("{:?}", tweet);
     let new_message = add_user_initials(&tweet, &config);
 
@@ -78,6 +125,18 @@ fn get_tweets(consumer:&Token, access:&Token)->Option<Vec<Tweet>> {
     }
 
 }
+
+fn get_direct_messages(consumer:&Token, access:&Token)->Option<Vec<DirectMessage>> {
+    match twitter_api::get_direct_messages(&consumer, &access) {
+        Err(e) => {
+            println!("{:?}", e);
+            None
+        },
+        Ok(messages) => Some(messages),
+    }
+
+}
+
 
 
 

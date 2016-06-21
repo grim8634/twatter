@@ -10,6 +10,7 @@ pub struct TwitterConfig {
     pub consumer_secret: String,
     pub access_key: String,
     pub access_secret: String,
+    pub screen_name: String,
 }
 
 pub type AliasTable = ::toml::Table;

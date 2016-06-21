@@ -5,6 +5,7 @@ authors = ["Graeme Lawton <graeme.lawton@la.wton.email>"]
 
 [dependencies]
 twitter-api = { git = "https://github.com/grim8634/twitter-api-rs.git" }
+#twitter-api = { path = "../twitter-api-rs" }
 log = "0.3"
 env_logger = "0.3"
 oauth-client = "0.1"
