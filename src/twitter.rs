@@ -99,7 +99,7 @@ fn retweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig
     println!("{:?}", tweet);
     let new_message = add_user_initials(tweet, config);
 
-    if new_message.len() > 140 {
+    if new_message.len() > 280 {
         println!("\tTWEET TOO LONG");
         twitter_api::direct_message(
             consumer, 
