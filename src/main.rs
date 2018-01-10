@@ -1,29 +1,26 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
-#![feature(custom_derive, plugin)]
-#![plugin(serde_macros)]
 #[macro_use] extern crate log;
-#[macro_use] extern crate quick_error;
-
 extern crate env_logger;
 extern crate twitter_api;
 extern crate oauth_client;
-extern crate toml;
-extern crate serde;
+extern crate config;
 
 mod twitter;
 mod counter;
-mod config;
 
 fn main() {
     env_logger::init().unwrap();
 
-    let config = match config::TwatterConfig::parse( "twatter.toml" ) {
-        Ok(v) => v, //Arc because threads
-        Err(e) => panic!("{}", e ),
-    };
+    let mut config = config::Config::default();
 
-    twitter::run(&config);
+    config
+        .merge(config::File::with_name("twatter"))
+        .expect("Unable to load twatter.toml")
+        .merge(config::Environment::with_prefix("twatter"))
+        .expect("Failed to read ENV");
+
+    twitter::run(config);
 }
 
 

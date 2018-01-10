@@ -2,15 +2,23 @@ use oauth_client::Token;
 use twitter_api::{Tweet, DirectMessage};
 use twitter_api;
 use counter;
+use config::Config;
 use std::time::Duration;
 use std::thread;
-use config::TwatterConfig;
+use std::collections::HashMap;
 
-pub fn run(config: &TwatterConfig) {
-    let conf = &config.twitter;
+pub fn run(config: Config) {
+    let conf = config.clone().get::<HashMap<String,String>>("twitter").expect("[twitter] block not found in config");
 
-    let consumer = Token::new(conf.consumer_key.to_string(), conf.consumer_secret.to_string());
-    let access = Token::new(conf.access_key.to_string(), conf.access_secret.to_string());
+    let consumer = Token::new(
+        conf.get("consumer_key").expect("consumer_key in config").clone(), 
+        conf.get("consumer_secret").expect("consumer_secret in config").clone()
+    );
+    
+    let access = Token::new(
+        conf.get("access_key").expect("access_key in config").clone(), 
+        conf.get("access_secret").expect("access_secret in config").clone()
+    );
 
     loop {
         info!("Checking for tweets....");
@@ -29,10 +37,10 @@ pub fn run(config: &TwatterConfig) {
                         if tweet.id > new_max_id {
                             new_max_id = tweet.id;
                         }
-                        process_tweet(&tweet, &consumer, &access, config);
+                        process_tweet(&tweet, &consumer, &access, config.clone());
                     }
                     //must be a better way to do this?
-                    if (tweet.id > dm_max_id) && (tweet.user.screen_name == config.twitter.screen_name) {
+                    if (tweet.id > dm_max_id) && (tweet.user.screen_name == conf.get("screen_name").expect("Config contains screen_name").clone()) {
                         dm_max_id = tweet.id;
                     }
                 }
@@ -40,18 +48,20 @@ pub fn run(config: &TwatterConfig) {
         }
 
         counter::set(new_max_id, "status.id").unwrap();
-        process_dms(&consumer, &access, config, &dm_max_id);
+        process_dms(&consumer, &access, config.clone(), &dm_max_id);
         thread::sleep(Duration::from_secs(60)); //Run every 60 seconds...
     }
 }
 
-fn process_dms(consumer: &Token, access: &Token, config: &TwatterConfig, last_tweet_id: &u64) {
+
+fn process_dms(consumer: &Token, access: &Token, config: Config, last_tweet_id: &u64) {
     let dms = get_direct_messages(consumer, access);
+    let aliases = config.get::<HashMap<String,String>>("aliases").expect("Failed to load aliases from config");
     if ! dms.is_none() {
         let dms = dms.unwrap();
         if ! dms.is_empty() {
             for dm in dms {
-                if ! config.aliases[&dm.sender_screen_name].as_str().unwrap().is_empty() {
+                if ! aliases.get(&dm.sender_screen_name).unwrap().is_empty() {
                     process_dm_command(consumer, access, &dm, last_tweet_id);
                 }
             }
@@ -89,13 +99,13 @@ fn delete_tweet(consumer: &Token, access: &Token, last_tweet_id: &u64) {
     });
 }
 
-fn process_tweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
-    if tweet.user.screen_name != config.twitter.screen_name {
+fn process_tweet(tweet: &Tweet, consumer:&Token, access:&Token, config: Config) {
+    if tweet.user.screen_name != config.get::<String>("twitter.screen_name").expect("twitter.screen_name not specified") {
         retweet(tweet, consumer, access, config);
     }
 }
 
-fn retweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig) {
+fn retweet(tweet: &Tweet, consumer:&Token, access:&Token, config: Config) {
     println!("{:?}", tweet);
     let new_message = add_user_initials(tweet, config);
 
@@ -117,8 +127,8 @@ fn retweet(tweet: &Tweet, consumer:&Token, access:&Token, config: &TwatterConfig
     }
 }
 
-fn add_user_initials( tweet: &Tweet, config: &TwatterConfig ) -> String {
-    format!("{} ({})", &tweet.text, config.aliases[&tweet.user.screen_name].as_str().unwrap())
+fn add_user_initials( tweet: &Tweet, config: Config ) -> String {
+    format!("{} ({})", &tweet.text, config.get::<HashMap<String,String>>("aliases").expect("Failed to load aliases").get::<String>(&tweet.user.screen_name).unwrap())
 }
 
 fn get_tweets(consumer:&Token, access:&Token)->Option<Vec<Tweet>> {
@@ -140,7 +150,3 @@ fn get_direct_messages(consumer:&Token, access:&Token)->Option<Vec<DirectMessage
         Ok(messages) => Some(messages),
     }
 }
-
-
-
-
