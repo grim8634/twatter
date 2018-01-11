@@ -61,7 +61,7 @@ fn process_dms(consumer: &Token, access: &Token, config: Config, last_tweet_id: 
         let dms = dms.unwrap();
         if ! dms.is_empty() {
             for dm in dms {
-                if ! aliases.get(&dm.sender_screen_name).unwrap().is_empty() {
+                if ! aliases.contains_key(&dm.sender_screen_name) {
                     process_dm_command(consumer, access, &dm, last_tweet_id);
                 }
             }
