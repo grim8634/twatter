@@ -14,7 +14,7 @@ pub fn run(config: Config) {
         conf.get("consumer_key").expect("consumer_key in config").clone(), 
         conf.get("consumer_secret").expect("consumer_secret in config").clone()
     );
-    
+
     let access = Token::new(
         conf.get("access_key").expect("access_key in config").clone(), 
         conf.get("access_secret").expect("access_secret in config").clone()
@@ -27,6 +27,7 @@ pub fn run(config: Config) {
         let mut dm_max_id = 0 as u64; //We need the actual max id to delete last message
 
         let tweets = get_tweets(&consumer, &access);
+        debug!("Tweets: {:?}", tweets);
         if ! tweets.is_none() {
             let tweets = tweets.unwrap();
             if tweets.is_empty() {
@@ -56,12 +57,14 @@ pub fn run(config: Config) {
 
 fn process_dms(consumer: &Token, access: &Token, config: Config, last_tweet_id: &u64) {
     let dms = get_direct_messages(consumer, access);
+    debug!("DMs: {:?}", dms);
     let aliases = config.get::<HashMap<String,String>>("aliases").expect("Failed to load aliases from config");
+    debug!("Aliases: {:?}", aliases);
     if ! dms.is_none() {
         let dms = dms.unwrap();
         if ! dms.is_empty() {
             for dm in dms {
-                if ! aliases.contains_key(&dm.sender_screen_name) {
+                if aliases.contains_key(&dm.sender_screen_name) {
                     process_dm_command(consumer, access, &dm, last_tweet_id);
                 }
             }
@@ -128,7 +131,7 @@ fn retweet(tweet: &Tweet, consumer:&Token, access:&Token, config: Config) {
 }
 
 fn add_user_initials( tweet: &Tweet, config: Config ) -> String {
-    format!("{} ({})", &tweet.text, config.get::<HashMap<String,String>>("aliases").expect("Failed to load aliases").get::<String>(&tweet.user.screen_name).unwrap())
+    format!("{} ({})", &tweet.full_text, config.get::<HashMap<String,String>>("aliases").expect("Failed to load aliases").get::<String>(&tweet.user.screen_name).unwrap())
 }
 
 fn get_tweets(consumer:&Token, access:&Token)->Option<Vec<Tweet>> {
